@@ -1,0 +1,8 @@
+# Normalize line endings to LF for text files regardless of platform --
+# found live: Windows core.autocrlf checking files out as CRLF broke
+# Release-ToPublic.ps1's `git apply` (patch context is generated from LF
+# blob content via `git diff`/`git show`, but applies against the actual
+# CRLF working-tree files in the script's scratch clone) even though the
+# underlying content was identical. Binary assets are left untouched by
+# `text=auto`'s own detection, no separate binary list needed.
+* text=auto eol=lf
