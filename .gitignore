@@ -1,0 +1,52 @@
+
+# secrets — never commit
+.env
+*.env
+.env.*
+!.env.example
+_workshop/
+
+# ad-hoc local demo/test recordings — not project assets
+*.mp4
+
+# local per-machine deploy overrides (real container/volume names, remote
+# hosts) — never something another deployer's compose run should see
+docker-compose.override.yml
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# frontend
+node_modules/
+web/frontend/dist/
+
+# build artifacts
+web/backend/static/
+
+# runtime data (config.json, sessions.json, sqlite DB, rendered HLS output —
+# never commit real credentials/data)
+/data/
+web/backend/data/
+renderer/data/
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+
+# os/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/

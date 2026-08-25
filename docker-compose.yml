@@ -1,0 +1,22 @@
+services:
+  classic4kast:
+    build: .
+    image: classic4kast:local
+    container_name: classic4kast
+    restart: unless-stopped
+    # Chromium (web-channel renderer) needs real /dev/shm even with
+    # --disable-dev-shm-usage.
+    shm_size: 512mb
+    environment:
+      # Optional -- if unset, entrypoint.sh generates one on first boot and
+      # persists it to the data volume. Only set this if you need a stable,
+      # externally-known value (e.g. restoring onto a fresh volume from a
+      # backup that doesn't include .agent_token).
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
+    volumes:
+      - classic4kast_data:/data
+    ports:
+      - "8283:8283"
+
+volumes:
+  classic4kast_data:

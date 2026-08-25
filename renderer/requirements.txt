@@ -1,0 +1,6 @@
+Pillow
+httpx
+astral
+fonttools
+timezonefinder
+aiohttp

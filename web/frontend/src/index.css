@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Brand palette (_workshop/logo/color_pallette.jpg, exact hex -> HSL):
+   navy #0B1D33 = 213 65% 12%   blue #0085FF = 209 100% 50%
+   cyan #00D9FF = 189 100% 50%  amber #FFC107 = 45 100% 51%
+   orange #FF6B00 = 25 100% 50% red #E53935 = 1 77% 55%
+   off-white #F2F2F2 = 0 0% 95%
+   Applied 2026-08-24: primary/ring/brand2/brand3/destructive retinted to
+   these exact values across dark/mid/light/warm; dark theme (the default)
+   additionally rebuilt from background through accent using the navy/
+   off-white/cyan swatches. blue/amber/orange are all light enough that
+   dark (not white) foreground text is the correct contrast choice on them
+   -- verified via WCAG relative luminance, not assumed -- so primary-
+   foreground/brand2-foreground/brand3-foreground all reuse each theme's
+   own darkest tone rather than the previous per-token white/dark mix.
+   mono is deliberately left untouched: it exists specifically as a true
+   grayscale alternative, and injecting saturated brand hues into it would
+   defeat that purpose. */
+
+@layer base {
+  :root, [data-theme="dark"] {
+    --background:             213 65% 8%;
+    --foreground:             0 0% 95%;
+    --card:                   213 65% 12%;
+    --card-foreground:        0 0% 95%;
+    --border:                 213 40% 22%;
+    --input:                  213 40% 22%;
+    --primary:                209 100% 50%;
+    --primary-foreground:     213 65% 8%;
+    --secondary:              213 50% 16%;
+    --secondary-foreground:   0 0% 95%;
+    --muted:                  213 40% 16%;
+    --muted-foreground:       213 15% 65%;
+    --accent:                 189 100% 50%;
+    --accent-foreground:      213 65% 8%;
+    --destructive:            1 77% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --success:                160 70% 45%;
+    --success-foreground:     213 65% 8%;
+    --warning:                40 90% 55%;
+    --warning-foreground:     213 65% 8%;
+    --ring:                   209 100% 50%;
+    --radius:                 0.5rem;
+  }
+
+  [data-theme="mid"] {
+    --background:             215 28% 16%;
+    --foreground:             210 35% 94%;
+    --card:                   215 28% 20%;
+    --card-foreground:        210 35% 94%;
+    --border:                 215 22% 30%;
+    --input:                  215 22% 30%;
+    --primary:                209 100% 50%;
+    --primary-foreground:     215 28% 10%;
+    --secondary:              215 22% 26%;
+    --secondary-foreground:   210 35% 94%;
+    --muted:                  215 22% 24%;
+    --muted-foreground:       215 15% 68%;
+    --accent:                 215 22% 26%;
+    --accent-foreground:      210 35% 94%;
+    --destructive:            1 77% 55%;
+    --destructive-foreground: 210 40% 98%;
+    --success:                160 65% 42%;
+    --success-foreground:     215 28% 10%;
+    --warning:                38 85% 52%;
+    --warning-foreground:     215 28% 10%;
+    --ring:                   209 100% 50%;
+    --radius:                 0.5rem;
+  }
+
+  [data-theme="light"] {
+    --background:             0 0% 97%;
+    --foreground:             220 40% 12%;
+    --card:                   0 0% 100%;
+    --card-foreground:        220 40% 12%;
+    --border:                 220 15% 88%;
+    --input:                  220 15% 88%;
+    --primary:                209 100% 50%;
+    --primary-foreground:     220 40% 12%;
+    --secondary:              220 15% 93%;
+    --secondary-foreground:   220 40% 12%;
+    --muted:                  220 15% 94%;
+    --muted-foreground:       220 10% 42%;
+    --accent:                 220 15% 93%;
+    --accent-foreground:      220 40% 12%;
+    --destructive:            1 77% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success:                160 75% 28%;
+    --success-foreground:     0 0% 100%;
+    --warning:                38 90% 34%;
+    --warning-foreground:     0 0% 100%;
+    --ring:                   209 100% 50%;
+    --radius:                 0.5rem;
+  }
+
+  /* Deliberately unmodified -- see file header comment. */
+  [data-theme="mono"] {
+    --background:             0 0% 7%;
+    --foreground:             0 0% 92%;
+    --card:                   0 0% 11%;
+    --card-foreground:        0 0% 92%;
+    --border:                 0 0% 20%;
+    --input:                  0 0% 20%;
+    --primary:                0 0% 78%;
+    --primary-foreground:     0 0% 7%;
+    --secondary:              0 0% 16%;
+    --secondary-foreground:   0 0% 92%;
+    --muted:                  0 0% 15%;
+    --muted-foreground:       0 0% 58%;
+    --accent:                 0 0% 16%;
+    --accent-foreground:      0 0% 92%;
+    --destructive:            0 70% 62%;
+    --destructive-foreground: 0 0% 98%;
+    --success:                140 12% 58%;
+    --success-foreground:     0 0% 7%;
+    --warning:                45 18% 62%;
+    --warning-foreground:     0 0% 7%;
+    --ring:                   0 0% 78%;
+    --radius:                 0.5rem;
+    --brand2:                 140 12% 58%;
+    --brand2-foreground:      0 0% 7%;
+    --brand3:                 45 18% 62%;
+    --brand3-foreground:      0 0% 7%;
+  }
+
+  [data-theme="warm"] {
+    --background:             223 24% 6%;
+    --foreground:             220 19% 94%;
+    --card:                   222 23% 11%;
+    --card-foreground:        220 19% 94%;
+    --border:                 223 19% 18%;
+    --input:                  223 19% 18%;
+    --primary:                209 100% 50%;
+    --primary-foreground:     24 69% 10%;
+    --secondary:              224 21% 14%;
+    --secondary-foreground:   220 19% 94%;
+    --muted:                  224 21% 14%;
+    --muted-foreground:       225 12% 61%;
+    --accent:                 224 21% 14%;
+    --accent-foreground:      220 19% 94%;
+    --destructive:            1 77% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --success:                169 36% 54%;
+    --success-foreground:     169 51% 8%;
+    --warning:                40 90% 55%;
+    --warning-foreground:     24 69% 10%;
+    --ring:                   209 100% 50%;
+    --radius:                 0.625rem;
+    --brand2:                 45 100% 51%;
+    --brand2-foreground:      24 69% 10%;
+    --brand3:                 25 100% 50%;
+    --brand3-foreground:      24 69% 10%;
+  }
+}
+
+/* --brand2/--brand3 for dark/mid/light (warm and mono set their own above)
+   -- amber/orange from the brand palette, dark foreground on both (verified
+   via WCAG luminance: both are light enough that dark text reads better
+   than white, same reasoning as --primary above). */
+:root, [data-theme="dark"] { --brand2: 45 100% 51%; --brand2-foreground: 213 65% 8%;  --brand3: 25 100% 50%; --brand3-foreground: 213 65% 8%; }
+[data-theme="mid"]         { --brand2: 45 100% 51%; --brand2-foreground: 215 28% 10%; --brand3: 25 100% 50%; --brand3-foreground: 215 28% 10%; }
+[data-theme="light"]       { --brand2: 45 100% 51%; --brand2-foreground: 220 40% 12%; --brand3: 25 100% 50%; --brand3-foreground: 220 40% 12%; }
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* Hides the OS scrollbar track on an element while leaving it fully
+   scrollable (touch/wheel/drag). Ported verbatim from VOD & DVR Manager's
+   template for use anywhere the same pattern is useful here. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

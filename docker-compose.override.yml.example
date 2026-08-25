@@ -1,0 +1,20 @@
+# Copy to docker-compose.override.yml and edit as needed. The base
+# docker-compose.yml stays generic (one container, default port) so it
+# works for anyone cloning this repo; real/local deployment specifics
+# belong here instead -- same convention VOD & DVR Manager uses.
+#
+# Note: as of the single-container consolidation, the weather renderer,
+# web-channel renderer, and web backend are three supervised processes
+# INSIDE one container talking over localhost -- there's no longer a
+# split-host scenario (renderer on one box, web on another) to override.
+# Dispatcharr running elsewhere still needs no compose override at all --
+# add its URL + API token from the web UI (Dispatcharr Connections page).
+
+services:
+  # Scenario: publish/rename the exposed port (only 8283 -- the web UI/API
+  # -- is exposed; Dispatcharr and browsers only ever talk to it, which
+  # internally proxies both renderers' HLS output).
+  #
+  # classic4kast:
+  #   ports:
+  #     - "8080:8283"
