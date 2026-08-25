@@ -49,16 +49,22 @@ NY and Austin, TX aren't necessarily where you'll actually point yours.)*
 ## 3. Installation
 
 ```sh
-git clone <this repo>
+git clone https://github.com/jstevenscl/classic4kast-video.git
 cd classic4kast-video
-docker compose up -d --build
+docker compose up -d
 ```
 
 That's it — one image (`classic4kast`), one container, three supervised
-processes inside it. `AGENT_TOKEN` doesn't need to be set by hand; the
-container generates and persists a random one to its data volume on first
-boot. Only pass `AGENT_TOKEN=<value>` in the environment if you need to pin
-it to a specific value.
+processes inside it, pulled straight from
+`ghcr.io/jstevenscl/classic4kast-video` (multi-arch: amd64/arm64).
+`AGENT_TOKEN` doesn't need to be set by hand; the container generates and
+persists a random one to its data volume on first boot. Only pass
+`AGENT_TOKEN=<value>` in the environment if you need to pin it to a
+specific value.
+
+To build from source instead of pulling the published image, add a
+`docker-compose.override.yml` with `build: .` and run
+`docker compose up -d --build`.
 
 ## 4. First-run setup
 

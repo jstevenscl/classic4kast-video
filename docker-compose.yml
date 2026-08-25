@@ -1,7 +1,6 @@
 services:
   classic4kast:
-    build: .
-    image: classic4kast:local
+    image: ghcr.io/jstevenscl/classic4kast-video:latest
     container_name: classic4kast
     restart: unless-stopped
     # Chromium (web-channel renderer) needs real /dev/shm even with

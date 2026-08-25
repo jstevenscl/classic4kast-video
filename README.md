@@ -64,8 +64,14 @@ All three talk to each other over `localhost` inside the one container.
 ## Quick start
 
 ```sh
+git clone https://github.com/jstevenscl/classic4kast-video.git
+cd classic4kast-video
 docker compose up -d
 ```
+
+This pulls the published multi-arch (amd64/arm64) image from
+`ghcr.io/jstevenscl/classic4kast-video`. To build from source instead, add
+a `docker-compose.override.yml` with `build: .`.
 
 `AGENT_TOKEN` no longer needs to be set by hand — the container generates
 and persists a random one to its data volume on first boot. Only pass
