@@ -17,6 +17,7 @@ for the concise technical reference version.
 9. [Fleet status & troubleshooting stutter](#9-fleet-status--troubleshooting-stutter)
 10. [Security](#10-security)
 11. [Web Channels (websites & Grafana dashboards)](#11-web-channels-websites--grafana-dashboards)
+12. [Exporting an M3U playlist](#12-exporting-an-m3u-playlist)
 
 ## 1. What it does
 
@@ -68,10 +69,15 @@ To build from source instead of pulling the published image, add a
 
 ## 4. First-run setup
 
-Open `http://<host>:8283`. Since no admin account exists yet, you'll be
-dropped straight into the app rather than a login screen — go to
-**Settings** and set an admin username/password. Every future visit will
-require login.
+Open `http://<host>:8283`. You'll see a one-time prompt to create an admin
+username/password — this is entirely optional, so **Skip for now** is fine
+on a private/trusted network. If you do set one, every future visit will
+require login; you can add, change, or remove it anytime later from
+**Settings → Access & Security**.
+
+<p align="center">
+  <img src="docs/screenshots/first-run-setup.jpg" alt="First-run admin login prompt, with Create admin login and Skip for now buttons" width="60%" />
+</p>
 
 ## 5. Creating your first channel
 
@@ -133,11 +139,19 @@ From the Channels list, click the deploy icon on a channel:
 
 - **Single instance**: pick a connection, a channel group (only groups that
   already contain real channels are shown — Dispatcharr's stream-import-only
-  groups are filtered out automatically), a channel name, and a stream
-  profile. Leave the stream profile on its default (**Redirect**) unless you
-  have a specific reason not to — see [section 9](#9-fleet-status--troubleshooting-stutter).
+  groups are filtered out automatically), a channel name, a **channel
+  number** (leave blank to auto-assign the group's next free number, or set
+  one to pin a specific slot — Dispatcharr rejects it if that number's
+  already taken in the group), and a stream profile. Leave the stream
+  profile on its default (**Redirect**) unless you have a specific reason
+  not to — see [section 9](#9-fleet-status--troubleshooting-stutter).
 - **Multiple instances**: check every connection you want to deploy to at
-  once; group and profile are matched by name across all of them.
+  once; group, profile, and channel number are applied identically across
+  all of them.
+
+<p align="center">
+  <img src="docs/screenshots/deploy-channel-number.png" alt="Deploy modal showing the Channel number field" width="50%" />
+</p>
 
 Deployed channels show up in the channel's deploy list with per-deployment
 refresh/remove actions, and in **Fleet Status** for render health.
@@ -174,8 +188,11 @@ usually the fix, not a Classic4Kast Video+ bug.
 
 ## 10. Security
 
-- Set an admin password on first run — don't leave the instance open on a
-  network you don't control.
+- Set an admin login (first-run prompt, or **Settings → Access & Security**
+  anytime after) if this instance is reachable from a network you don't
+  fully control — it's opt-in and can be skipped, but skipping leaves every
+  management action (channels, deploys, settings) open to anyone who can
+  reach the app.
 - Dispatcharr API tokens are encrypted at rest.
 - If you're exposing Classic4Kast Video+'s stream output beyond your own network, set
   a **stream key** (Settings → Stream Key) — it's baked into the deployed
@@ -301,3 +318,55 @@ A couple of things worth knowing:
   this generically across arbitrary sites.
 - **Clear** removes a captured session (shown once one exists), forcing a
   fresh login next time.
+
+### "Failed to launch the browser process" (read-only root filesystem)
+
+Website channel capture (and the **Log in** flow above) both drive a
+shared headless Chromium instance. If it fails to start with logs like:
+
+```
+[manager][<slug>] capture start failed: Failed to launch the browser process!
+chrome_crashpad_handler: --database is required
+```
+
+Chromium's crash handler is trying to write its database/cache under the
+default XDG paths in `$HOME` and can't — this shows up when the container
+runs with a read-only root filesystem (a common hardening setting in
+Kubernetes, Portainer, or a hand-hardened Compose file; not the default in
+the shipped `docker-compose.yml`). Fix it by pointing those paths at a
+writable location instead, e.g. in the container's `environment:`:
+
+```yaml
+XDG_CONFIG_HOME: /tmp
+XDG_CACHE_HOME: /tmp
+```
+
+`/tmp` is writable even under `read_only: true` (Docker and Kubernetes
+both give it its own tmpfs by default). This has fixed the identical
+symptom on more than one read-only-root deployment so far.
+
+## 12. Exporting an M3U playlist
+
+A standalone alternative to Dispatcharr deploy: go to **Export M3U**, check
+any mix of weather and web channels, and either download a plain `.m3u8`
+file (for VLC, or to import as a one-time upload into Dispatcharr/Threadfin)
+or copy the generated **Playlist URL** to add as a live M3U *source* in
+Dispatcharr, Threadfin, or Jellyfin — that URL is fetched directly by those
+tools on their own schedule, so it always reflects your current channel
+selection with no re-upload needed.
+
+<p align="center">
+  <img src="docs/screenshots/export-m3u.jpg" alt="Export M3U page with weather and web channel checklists" width="80%" />
+</p>
+
+It reuses the exact same **Public URL** (and **stream key**, if set) as
+Dispatcharr's own Redirect-profile deploy — see [section 10](#10-security).
+If you haven't set a stream key and your Public URL is a real
+internet-facing domain (not a private/Tailscale address), the page warns
+you before you hand out a playlist that anyone could watch.
+
+**Adding it to Dispatcharr as a live source:** M3U & EPG Manager → Add M3U →
+Account Type **Standard** → paste the Playlist URL → save, then open the
+account's **Groups** tab and enable **Auto Channel Sync** on the group your
+channels landed in (they'll all be under one group unless you're mixing in
+other real M3U sources with their own `group-title`s).

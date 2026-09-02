@@ -20,7 +20,9 @@ the border.</em></p>
 Dispatcharr integration is optional. Classic4Kast Video+ runs standalone with zero
 Dispatcharr connections configured; when you do add one (or several — same
 host or remote), it deploys real Dispatcharr channels into existing channel
-groups, not raw stream-import groups.
+groups, not raw stream-import groups. Prefer a plain M3U instead? Export a
+playlist (or a live, pollable M3U source URL) for Dispatcharr, Threadfin,
+Jellyfin, or VLC without touching Dispatcharr's deploy flow at all.
 
 > **New here?** See [USERGUIDE.md](USERGUIDE.md) for a full walkthrough —
 > install, first channel, Dispatcharr wiring, day-to-day use. This README is
@@ -54,7 +56,8 @@ one image and one `docker compose up`:
   (cloud SSO/MFA included) are supported via an interactive session
   capture — see [USERGUIDE.md § 11](USERGUIDE.md#logging-into-gated-pages-session-capture).
 - **`web`** — the admin UI and control plane: channel configuration (both
-  kinds), Dispatcharr connection management, and deploy/undeploy. Both
+  kinds), Dispatcharr connection management, deploy/undeploy, and M3U
+  playlist export. Both
   renderers poll `web` for their channel lists and report render results
   back over two independent token-authed API contracts; `web` is the only
   process with a published port.
@@ -78,8 +81,10 @@ and persists a random one to its data volume on first boot. Only pass
 `AGENT_TOKEN=<value>` in the environment if you specifically need to pin it
 to a known value.
 
-Open `http://<host>:8283`, set an admin username/password on first load, and
-create your first channel.
+Open `http://<host>:8283` — you'll get a one-time, skippable prompt to set
+an admin username/password (fully optional on a private/trusted network;
+add, change, or remove it anytime later from Settings) — then create your
+first channel.
 
 <p align="center">
   <img src="docs/screenshots/channels-list.jpg" alt="Channels list in the admin UI" width="80%" />
