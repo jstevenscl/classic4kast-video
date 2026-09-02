@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 import db
 from config import APP_VERSION, LOG_BACKUP_COUNT, LOG_FILE, get_renderer_url, get_webchannel_renderer_url
+from m3u_routes import router as m3u_router
 from routes import agent_router, router
 from web_channel_routes import web_channel_agent_router, web_channel_router
 
@@ -74,6 +75,7 @@ app.include_router(router)
 app.include_router(agent_router)
 app.include_router(web_channel_router)
 app.include_router(web_channel_agent_router)
+app.include_router(m3u_router)
 
 
 @app.get("/weatherstar/{full_path:path}", include_in_schema=False)
@@ -90,6 +92,17 @@ async def proxy_weatherstar(full_path: str, request: Request):
     header is only ever injected by this app's own axios instance) -- access
     control for real public exposure is the separate stream-key mechanism
     the renderer itself already enforces on this same path.
+
+    -- found live 2026-09-02: also needs Access-Control-Allow-Origin. A
+    non-browser player (VLC, a TV app) doesn't care, but any *browser-based*
+    HLS player fetching this cross-origin (Dispatcharr's own admin preview,
+    a web IPTV client, hls.js anywhere but this app's own SPA origin) got
+    silently blocked by CORS with no useful error -- Dispatcharr's preview
+    modal just looped "Connection lost, reconnecting" while its own
+    server-side validation logged the manifest as perfectly valid. Same
+    open-by-default reasoning as the auth note above: this content has no
+    stronger protection than the stream key regardless of origin, so there's
+    nothing CORS was actually guarding here.
     """
     upstream = f"{get_renderer_url()}/weatherstar/{full_path}"
     async with httpx.AsyncClient(timeout=15) as client:
@@ -99,6 +112,7 @@ async def proxy_weatherstar(full_path: str, request: Request):
             raise HTTPException(status_code=502, detail=f"renderer unreachable: {exc}")
     excluded = {"content-encoding", "content-length", "transfer-encoding", "connection"}
     headers = {k: v for k, v in r.headers.items() if k.lower() not in excluded}
+    headers["Access-Control-Allow-Origin"] = "*"
     return Response(content=r.content, status_code=r.status_code, headers=headers)
 
 
@@ -122,6 +136,7 @@ async def proxy_webchannel(full_path: str, request: Request):
             raise HTTPException(status_code=502, detail=f"webchannel renderer unreachable: {exc}")
     excluded = {"content-encoding", "content-length", "transfer-encoding", "connection"}
     headers = {k: v for k, v in r.headers.items() if k.lower() not in excluded}
+    headers["Access-Control-Allow-Origin"] = "*"  # see proxy_weatherstar's docstring
     return Response(content=r.content, status_code=r.status_code, headers=headers)
 
 

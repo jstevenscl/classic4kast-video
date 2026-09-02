@@ -116,6 +116,126 @@ function StreamKeyCard() {
   )
 }
 
+function CredentialsCard() {
+  const queryClient = useQueryClient()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  const { data } = useQuery<{ has_credentials: boolean; credentials_env_override: boolean }>({
+    queryKey: ['settings'],
+    queryFn: () => api.get('/settings/').then((r) => r.data),
+  })
+  const hasCredentials = data?.has_credentials ?? false
+  const envOverride = data?.credentials_env_override ?? false
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['settings'] })
+
+  const saveMutation = useMutation({
+    mutationFn: () => api.post('/settings/credentials/', { username: username.trim(), password }),
+    onSuccess: (res) => {
+      // Storing the fresh token here means enabling/changing login from this
+      // page never immediately bounces the admin who just typed it to a
+      // login screen -- see routes.py's set_credentials_endpoint comment.
+      if (res.data.token) localStorage.setItem('classic4kast-session', res.data.token)
+      invalidate()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      setUsername('')
+      setPassword('')
+      setConfirm('')
+    },
+  })
+
+  const clearMutation = useMutation({
+    mutationFn: () => api.delete('/settings/credentials/'),
+    onSuccess: () => {
+      localStorage.removeItem('classic4kast-session')
+      invalidate()
+      window.location.reload()
+    },
+  })
+
+  const mismatch = password.length > 0 && confirm.length > 0 && password !== confirm
+
+  if (envOverride) {
+    return (
+      <Card>
+        <CardContent className="pt-4 pb-4 space-y-2">
+          <p className="text-sm font-medium">Admin login</p>
+          <p className="text-xs text-muted-foreground max-w-md">
+            Pinned via the CLASSIC4KAST_ADMIN_USER / CLASSIC4KAST_ADMIN_PASSWORD environment variables -- can't be
+            changed from this page. Unset them to manage credentials here instead.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-4 space-y-2">
+        <p className="text-sm font-medium">Admin login</p>
+        <p className="text-xs text-muted-foreground max-w-md">
+          Optional -- classic4kast works fine with no login at all (fine for a private/trusted network). Set a
+          username and password to require sign-in on every future visit; leave this alone if you don't want that.
+          {hasCredentials && ' Login is currently enabled -- fill in below to change it, or remove it to go back to no login.'}
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-muted-foreground">Username</span>
+            <Input
+              className="h-8 text-xs w-36" autoComplete="username"
+              value={username} onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-muted-foreground">Password</span>
+            <Input
+              className="h-8 text-xs w-36" type="password" autoComplete="new-password"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-muted-foreground">Confirm password</span>
+            <Input
+              className="h-8 text-xs w-36" type="password" autoComplete="new-password"
+              value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            />
+          </div>
+          <Button
+            size="sm" className="h-8 text-xs"
+            disabled={!username.trim() || password.length < 6 || mismatch || saveMutation.isPending}
+            onClick={() => saveMutation.mutate()}
+          >
+            {saveMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : hasCredentials ? 'Update' : 'Enable login'}
+          </Button>
+          {hasCredentials && (
+            <Button
+              size="sm" variant="outline" className="h-8 text-xs"
+              disabled={clearMutation.isPending}
+              onClick={() => clearMutation.mutate()}
+            >
+              {clearMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : 'Remove login'}
+            </Button>
+          )}
+          {saved && <CheckCircle2 size={14} className="text-success" />}
+        </div>
+        {mismatch && <p className="text-[10px] text-destructive">Passwords don't match.</p>}
+        {password.length > 0 && password.length < 6 && (
+          <p className="text-[10px] text-destructive">Password must be at least 6 characters.</p>
+        )}
+        {saveMutation.isError && (
+          <p className="text-[10px] text-destructive">
+            {(saveMutation.error as any)?.response?.data?.detail ?? 'Failed to save'}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function RefreshAllCard() {
   const [results, setResults] = useState<RefreshAllResult[] | null>(null)
   const queryClient = useQueryClient()
@@ -348,7 +468,7 @@ function DispatcharrToggleCard() {
             className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-muted'}`}
           >
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`}
+              className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
             />
           </button>
         </div>
@@ -389,6 +509,7 @@ export default function Settings() {
         </SettingsGroup>
       )}
       <SettingsGroup label="Access & Security">
+        <CredentialsCard />
         <StreamKeyCard />
       </SettingsGroup>
       <SettingsGroup label="Renderer Tuning">

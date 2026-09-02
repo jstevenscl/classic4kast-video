@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Flame, Link2, ListVideo, Loader2, LogOut, Monitor, Moon,
+  Flame, Link2, ListMusic, ListVideo, Loader2, LogOut, Monitor, Moon,
   Palette, Radio, Settings as SettingsIcon, Sun,
 } from 'lucide-react'
 import Login from '@/pages/Login'
+import FirstRunSetup from '@/pages/FirstRunSetup'
 import Channels from '@/pages/Channels'
 import WebChannels from '@/pages/WebChannels'
 import FleetStatus from '@/pages/FleetStatus'
+import ExportM3U from '@/pages/ExportM3U'
 import Connections from '@/pages/Connections'
 import Settings from '@/pages/Settings'
 import api from '@/lib/api'
@@ -36,8 +38,8 @@ function initTheme(): Theme {
   return t
 }
 
-type AuthState = 'checking' | 'login' | 'ready'
-export type Tab = 'channels' | 'webchannels' | 'fleet' | 'connections' | 'settings'
+type AuthState = 'checking' | 'first-run' | 'login' | 'ready'
+export type Tab = 'channels' | 'webchannels' | 'fleet' | 'm3u' | 'connections' | 'settings'
 
 interface NavItem { label: string; icon: React.ReactNode; tab: Tab }
 interface NavGroup { label: string; items: NavItem[] }
@@ -47,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Channels', icon: <ListVideo size={15} />, tab: 'channels' },
     { label: 'Web Channels', icon: <Monitor size={15} />, tab: 'webchannels' },
     { label: 'Fleet Status', icon: <Radio size={15} />, tab: 'fleet' },
+    { label: 'Export M3U', icon: <ListMusic size={15} />, tab: 'm3u' },
   ] },
   { label: 'Dispatcharr', items: [
     { label: 'Connections', icon: <Link2 size={15} />, tab: 'connections' },
@@ -62,7 +65,7 @@ export default function App() {
 
   const [activeTab, setActiveTabState] = useState<Tab>(() => {
     const saved = localStorage.getItem('classic4kast-tab')
-    return saved === 'channels' || saved === 'webchannels' || saved === 'fleet' || saved === 'connections' || saved === 'settings' ? saved : 'channels'
+    return saved === 'channels' || saved === 'webchannels' || saved === 'fleet' || saved === 'm3u' || saved === 'connections' || saved === 'settings' ? saved : 'channels'
   })
   function setActiveTab(t: Tab) {
     localStorage.setItem('classic4kast-tab', t)
@@ -75,10 +78,11 @@ export default function App() {
     setThemeState(t)
   }
 
-  // Same "open/unauthenticated only when unconfigured" pattern as VOD & DVR
-  // Manager -- /api/settings/ reports has_credentials, and the app skips
-  // straight to 'ready' with no login screen at all until an admin sets
-  // credentials for the first time via the Settings page.
+  // /api/settings/ reports has_credentials + credentials_choice_made. On a
+  // genuinely first launch (neither set yet) the one-time FirstRunSetup
+  // prompt decides whether to create a login or skip; once that choice is
+  // made (either way), this never shows again -- see config.py's
+  // credentials_choice_made()/mark_credentials_choice_made().
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: () => api.get('/settings/').then((r) => r.data),
@@ -89,7 +93,7 @@ export default function App() {
   useEffect(() => {
     if (isLoading) return
     if (!settings?.has_credentials) {
-      setAuthState('ready')
+      setAuthState(settings?.credentials_choice_made ? 'ready' : 'first-run')
       return
     }
     const token = localStorage.getItem('classic4kast-session')
@@ -97,7 +101,7 @@ export default function App() {
     api.get('/auth/verify/')
       .then((r) => setAuthState(r.data.valid ? 'ready' : 'login'))
       .catch(() => setAuthState('login'))
-  }, [isLoading, settings?.has_credentials])
+  }, [isLoading, settings?.has_credentials, settings?.credentials_choice_made])
 
   // Dispatcharr integration is opt-out, not required -- some users run this
   // fully standalone (an HLS URL handed to a player directly) and don't
@@ -129,6 +133,10 @@ export default function App() {
         <span className="text-sm">Loading…</span>
       </div>
     )
+  }
+
+  if (authState === 'first-run') {
+    return <FirstRunSetup onDone={() => setAuthState('ready')} />
   }
 
   if (authState === 'login') {
@@ -222,6 +230,7 @@ export default function App() {
           {activeTab === 'channels' && <Channels />}
           {activeTab === 'webchannels' && <WebChannels />}
           {activeTab === 'fleet' && <FleetStatus />}
+          {activeTab === 'm3u' && <ExportM3U />}
           {activeTab === 'connections' && <Connections />}
           {activeTab === 'settings' && <Settings />}
         </main>

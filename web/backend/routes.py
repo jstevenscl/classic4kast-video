@@ -29,8 +29,9 @@ from auth import create_session, revoke_all_sessions, revoke_session, verify_ses
 from config import (
     APP_VERSION, get_agent_token, get_dispatcharr_enabled, get_hls_list_size, get_hls_time_seconds,
     get_idle_timeout_seconds, get_public_url, get_renderer_url, get_stream_key, has_credentials,
-    save_dispatcharr_enabled, save_hls_list_size, save_hls_time_seconds, save_idle_timeout_seconds,
-    save_public_url, save_stream_key, set_credentials, verify_credentials,
+    clear_credentials, credentials_choice_made, mark_credentials_choice_made, save_dispatcharr_enabled,
+    save_hls_list_size, save_hls_time_seconds, save_idle_timeout_seconds, save_public_url, save_stream_key,
+    set_credentials, verify_credentials,
 )
 from dispatcharr_client import DispatcharrClient
 
@@ -220,6 +221,11 @@ class DeployRequest(BaseModel):
     # connection. []: no profiles. [ids]: exactly those profiles. Passed
     # straight through to Dispatcharr's channel_profile_ids semantics.
     channel_profile_ids: list[int] | None = None
+    # None (omitted): auto-assign the group's next free number, same as
+    # before. Set: use exactly this number -- Dispatcharr itself rejects the
+    # request if it's already taken in that group, surfaced as a normal
+    # deploy-failed error.
+    channel_number: int | None = None
 
 
 class BulkDeployRequest(BaseModel):
@@ -232,6 +238,10 @@ class BulkDeployRequest(BaseModel):
     # connection and don't carry across the several connections a bulk
     # deploy targets. Resolved to each connection's own id independently.
     channel_profile_names: list[str] | None = None
+    # Same explicit-number override as DeployRequest, applied identically on
+    # every targeted connection -- there's no per-connection numbering in
+    # bulk mode.
+    channel_number: int | None = None
 
 
 class UpdateChannelProfilesRequest(BaseModel):
@@ -268,10 +278,16 @@ async def logout(x_session_token: Optional[str] = Header(None, alias="X-Session-
 
 # ── Settings endpoints ────────────────────────────────────────────────────────
 
+def _credentials_env_override() -> bool:
+    return bool(os.environ.get("CLASSIC4KAST_ADMIN_USER") and os.environ.get("CLASSIC4KAST_ADMIN_PASSWORD"))
+
+
 @router.get("/settings/")
 async def get_settings():
     return {
         "has_credentials": has_credentials(),
+        "credentials_env_override": _credentials_env_override(),
+        "credentials_choice_made": credentials_choice_made() or _credentials_env_override(),
         "version": APP_VERSION,
         "dispatcharr_enabled": get_dispatcharr_enabled(),
     }
@@ -288,16 +304,48 @@ async def set_credentials_endpoint(
     body: CredentialsRequest,
     x_session_token: Optional[str] = Header(None, alias="X-Session-Token"),
 ):
+    if _credentials_env_override():
+        raise HTTPException(400, detail="Admin credentials are pinned via CLASSIC4KAST_ADMIN_USER/PASSWORD and can't be changed here.")
     if has_credentials():
-        env_override = bool(os.environ.get("CLASSIC4KAST_ADMIN_USER") and os.environ.get("CLASSIC4KAST_ADMIN_PASSWORD"))
-        if not env_override and not (x_session_token and verify_session(x_session_token)):
+        if not (x_session_token and verify_session(x_session_token)):
             raise HTTPException(401, detail="unauthorized")
     if not body.username.strip():
         raise HTTPException(400, detail="Username is required.")
     if len(body.password) < 6:
         raise HTTPException(400, detail="Password must be at least 6 characters.")
     set_credentials(body.username.strip(), body.password)
+    mark_credentials_choice_made()
     revoke_all_sessions(except_token=x_session_token)
+    # A fresh token so the caller (first-run screen, or Settings enabling
+    # login for the first time) lands straight in the app instead of being
+    # immediately bounced to a login screen for credentials it just typed.
+    return {"ok": True, "token": create_session()}
+
+
+@router.post("/settings/credentials/skip/")
+async def skip_credentials_endpoint():
+    """First-run "skip for now" -- records that the prompt was actually
+    shown and dismissed, distinct from has_credentials() staying False, so
+    the one-time prompt doesn't resurface on the next page load. Anyone can
+    call this while no credentials exist yet (nothing to protect); once
+    credentials are set, the first-run prompt can never show again anyway,
+    so this route doesn't need to handle that case."""
+    if has_credentials():
+        return {"ok": True}
+    mark_credentials_choice_made()
+    return {"ok": True}
+
+
+@router.delete("/settings/credentials/")
+async def clear_credentials_endpoint(x_session_token: Optional[str] = Header(None, alias="X-Session-Token")):
+    if _credentials_env_override():
+        raise HTTPException(400, detail="Admin credentials are pinned via CLASSIC4KAST_ADMIN_USER/PASSWORD and can't be changed here.")
+    if not has_credentials():
+        return {"ok": True}
+    if not (x_session_token and verify_session(x_session_token)):
+        raise HTTPException(401, detail="unauthorized")
+    clear_credentials()
+    revoke_all_sessions()
     return {"ok": True}
 
 
@@ -571,17 +619,21 @@ async def _deploy_to_connection(
     client: DispatcharrClient, connection: dict, channel: dict,
     channel_group_id: int, name: str | None, stream_profile_id: int | None,
     logo_url: str | None, channel_profile_ids: list[int] | None = None,
+    channel_number: int | None = None,
 ) -> dict:
     stream_url = _stream_url(channel)
 
     group = await client.get(f"/api/channels/groups/{channel_group_id}/")
 
-    existing = await client.get(
-        "/api/channels/channels/",
-        params={"channel_group": group["name"], "ordering": "-channel_number", "page_size": 1},
-    )
-    results = existing.get("results", existing) if isinstance(existing, dict) else existing
-    next_number = int(results[0]["channel_number"]) + 1 if results else 1
+    if channel_number is not None:
+        next_number = channel_number
+    else:
+        existing = await client.get(
+            "/api/channels/channels/",
+            params={"channel_group": group["name"], "ordering": "-channel_number", "page_size": 1},
+        )
+        results = existing.get("results", existing) if isinstance(existing, dict) else existing
+        next_number = int(results[0]["channel_number"]) + 1 if results else 1
 
     resolved_name = (name or "").strip() or f"WeatherStar - {channel['city_name']}"
     # Channel's write field is "channel_group_id" -- "channel_group" is
@@ -653,6 +705,7 @@ async def post_deploy_channel(channel_id: int, body: DeployRequest):
         return await _deploy_to_connection(
             client, connection, channel, body.channel_group_id, body.name,
             body.stream_profile_id, body.logo_url, body.channel_profile_ids,
+            body.channel_number,
         )
     except HTTPException:
         raise
@@ -727,7 +780,7 @@ async def post_deploy_channel_bulk(channel_id: int, body: BulkDeployRequest):
 
             deployment = await _deploy_to_connection(
                 client, connection, channel, group["id"], body.name, stream_profile_id, body.logo_url,
-                channel_profile_ids,
+                channel_profile_ids, body.channel_number,
             )
             results.append({"connection_id": connection_id, "connection_label": connection["label"], "ok": True, "deployment": deployment})
         except Exception as exc:

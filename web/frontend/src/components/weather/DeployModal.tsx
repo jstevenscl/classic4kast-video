@@ -22,6 +22,7 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
   const [connectionId, setConnectionId] = useState<number | ''>('')
   const [groupId, setGroupId] = useState<number | ''>('')
   const [name, setName] = useState(`${channel.city_name}`)
+  const [channelNumber, setChannelNumber] = useState('')
   const [streamProfileId, setStreamProfileId] = useState<number | ''>('')
   const [profileTouched, setProfileTouched] = useState(false)
   const [logoUrl, setLogoUrl] = useState('')
@@ -90,6 +91,7 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
         stream_profile_id: streamProfileId === '' ? null : streamProfileId,
         logo_url: logoUrl.trim() || undefined,
         channel_profile_ids: profileMode === 'specific' ? selectedProfileIds : undefined,
+        channel_number: channelNumber.trim() ? Number(channelNumber) : undefined,
       }),
     onSuccess: () => {
       invalidate()
@@ -99,6 +101,7 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
       setProfileTouched(false)
       setLogoTouched(false)
       setName(channel.city_name)
+      setChannelNumber('')
       setProfileMode('all')
       setSelectedProfileIds([])
     },
@@ -190,6 +193,7 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
         name: name.trim() || undefined,
         logo_url: logoUrl.trim() || undefined,
         channel_profile_names: bulkChannelProfileMode === 'specific' ? bulkChannelProfileNames : undefined,
+        channel_number: channelNumber.trim() ? Number(channelNumber) : undefined,
       }),
     onSuccess: (res) => {
       invalidate()
@@ -332,6 +336,17 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
                   <Input className="h-8 text-xs" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-muted-foreground">Channel number</span>
+                  <Input
+                    className="h-8 text-xs w-28" type="number" min={1} placeholder="Auto (next free)"
+                    value={channelNumber} onChange={(e) => setChannelNumber(e.target.value)}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    Leave blank to auto-assign the group's next free number. Set one to pin a specific slot --
+                    Dispatcharr rejects it if that number's already taken in this group.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-muted-foreground">Stream profile</span>
                   <select
                     className="h-8 text-xs bg-background border border-border rounded px-2"
@@ -402,9 +417,6 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-muted-foreground">
-                  Creates a channel in this group using the next available channel number.
-                </p>
                 <Button
                   size="sm"
                   className="h-8 text-xs gap-1"
@@ -463,6 +475,17 @@ export default function DeployModal({ channel, onClose }: { channel: WeatherStar
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-muted-foreground">Channel name</span>
                   <Input className="h-8 text-xs" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-muted-foreground">Channel number</span>
+                  <Input
+                    className="h-8 text-xs w-28" type="number" min={1} placeholder="Auto (next free)"
+                    value={channelNumber} onChange={(e) => setChannelNumber(e.target.value)}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    Leave blank to auto-assign per connection. Set one to use the same number on every selected
+                    connection -- fails on any where it's already taken.
+                  </span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-muted-foreground">Stream profile name</span>

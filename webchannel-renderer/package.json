@@ -1,6 +1,6 @@
 {
   "name": "classic4kast-webchannel-renderer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
   "description": "Screenshot-to-HLS renderer for arbitrary-website/Grafana-dashboard channels -- separate service from the Python weather renderer, see src/index.js.",

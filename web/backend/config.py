@@ -16,7 +16,7 @@ APP_PORT    = int(os.environ.get("APP_PORT", "8283"))
 # Single source of truth for the semantic version -- see VOD & DVR Manager's
 # config.py for why (main.py's FastAPI(version=...) and any /version/ route
 # both import this instead of repeating the literal).
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.1.1"
 
 # Persisted log file for main.py's rotating file handler.
 LOG_DIR          = DATA_DIR / "logs"
@@ -258,4 +258,27 @@ def set_credentials(username: str, password: str) -> None:
     hashed = _hash_password(password, salt)
     data   = _read_raw()
     data.update({"auth_username": username, "auth_salt": salt, "auth_hash": hashed})
+    _write_raw(data)
+
+
+def clear_credentials() -> None:
+    data = _read_raw()
+    data.pop("auth_username", None)
+    data.pop("auth_salt", None)
+    data.pop("auth_hash", None)
+    _write_raw(data)
+
+
+# Tracks whether the first-run "create an admin login, or skip" prompt has
+# already been resolved -- distinct from has_credentials() itself, since
+# "the user explicitly chose to skip" and "nobody's been asked yet" both
+# look like has_credentials()==False otherwise, and the frontend needs to
+# tell those two apart to show the one-time prompt only once.
+def credentials_choice_made() -> bool:
+    return has_credentials() or bool(_read_raw().get("credentials_choice_made"))
+
+
+def mark_credentials_choice_made() -> None:
+    data = _read_raw()
+    data["credentials_choice_made"] = True
     _write_raw(data)
